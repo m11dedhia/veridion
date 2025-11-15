@@ -93,8 +93,7 @@ pip install -r requirements.txt
 
 ### 4. Run in Daytona
 
-**Recommended**: The project is fully configured for Daytona. Open it in a Daytona workspace and all workload (including LLM calls) will run in the sandbox. See [README_DAYTONA.md](README_DAYTONA.md) for details.
-
+**Recommended**: The project is fully configured for Daytona. Open it in a Daytona workspace and all workload (including LLM calls) will run in the sandbox. 
 ### 5. Run Tests
 
 #### Using CLI

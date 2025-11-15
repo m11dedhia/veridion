@@ -71,6 +71,40 @@
             grid-template-columns: 1fr 1fr;
             gap: 30px;
             margin-bottom: 30px;
+            align-items: start;
+        }
+        
+        .info-panel {
+            background: white;
+            padding: 30px;
+            border-radius: 15px;
+            box-shadow: 0 8px 16px rgba(0,0,0,0.1);
+            height: fit-content;
+        }
+        
+        .info-panel h2 {
+            color: #333;
+            margin-bottom: 20px;
+            font-size: 24px;
+        }
+        
+        .info-section {
+            margin-bottom: 20px;
+        }
+        
+        .info-section h3 {
+            color: #667eea;
+            font-size: 16px;
+            margin-bottom: 12px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        
+        .info-section p {
+            color: #666;
+            font-size: 14px;
+            line-height: 1.6;
         }
         
         .test-form {
@@ -345,6 +379,62 @@
             font-family: 'Courier New', monospace;
         }
         
+        .session-link-box {
+            background: linear-gradient(135deg, #667eea15, #764ba215);
+            border: 2px solid #667eea;
+            border-radius: 8px;
+            padding: 15px;
+            margin-bottom: 15px;
+        }
+
+        .session-link-box h4 {
+            color: #667eea;
+            margin-bottom: 10px;
+            font-size: 14px;
+        }
+
+        .session-link {
+            display: inline-block;
+            color: #667eea;
+            text-decoration: none;
+            font-weight: 600;
+            padding: 10px 16px;
+            background: white;
+            border: 2px solid #667eea;
+            border-radius: 6px;
+            transition: all 0.3s;
+        }
+
+        .session-link:hover {
+            background: #667eea;
+            color: white;
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(102, 126, 234, 0.3);
+        }
+
+        .session-note {
+            font-size: 12px;
+            color: #666;
+            margin-top: 8px;
+            font-style: italic;
+        }
+
+        .error-box {
+            margin-bottom: 15px;
+        }
+
+        .details-box {
+            margin-top: 15px;
+            padding-top: 15px;
+            border-top: 1px solid #e0e0e0;
+        }
+
+        .details-box h4 {
+            color: #333;
+            margin-bottom: 10px;
+            font-size: 14px;
+        }
+
         .analysis-box {
             background: #fff9e6;
             border-left: 4px solid #ffc107;
@@ -538,6 +628,34 @@
                     {% endfor %}
                 </div>
             </div>
+            
+            <div class="info-panel">
+                <h2>📹 Live Session Viewing</h2>
+                
+                <div class="info-section">
+                    <h3>🎬 Watch in Real-Time</h3>
+                    <p>After running a test, click the <strong>"View Browser-Use Session with Screenshots"</strong> link in the results to watch the AI agent interact with the browser live, including all captured screenshots and actions.</p>
+                </div>
+                
+                <div class="info-section">
+                    <h3>🔍 Session Details</h3>
+                    <p>Each session provides:</p>
+                    <ul style="margin-left: 20px; margin-top: 8px; color: #666; font-size: 14px;">
+                        <li>Real-time screenshots of browser state</li>
+                        <li>Agent reasoning and decision-making</li>
+                        <li>Step-by-step action log</li>
+                        <li>Performance metrics</li>
+                    </ul>
+                </div>
+                
+                <div class="info-section">
+                    <h3>💡 Tips</h3>
+                    <p>• Tests run asynchronously—results appear in the dashboard below<br>
+                    • Session links open in a new tab for easy viewing<br>
+                    • Failed tests include LLM-powered analysis<br>
+                    • Use Daytona mode for isolated sandbox execution</p>
+                </div>
+            </div>
         </div>
         
         <div class="loading" id="loading">
@@ -676,18 +794,26 @@
                             </div>
                             <span class="status-badge ${statusClass}">${statusBadge}</span>
                         </div>
-                        ${!result.success ? `
                         <div class="result-details">
-                            <h4>❌ Error Details</h4>
-                            <pre>${escapeHtml(result.error || 'No error details')}</pre>
-                            ${result.analysis ? `
-                            <div class="analysis-box">
-                                <h4>🧠 LLM Analysis</h4>
-                                <pre>${escapeHtml(result.analysis)}</pre>
+                            ${!result.success ? `
+                            <div class="error-box">
+                                <h4>❌ Error Details</h4>
+                                <pre>${escapeHtml(result.error || 'No error details')}</pre>
+                                ${result.analysis ? `
+                                <div class="analysis-box">
+                                    <h4>🧠 LLM Analysis</h4>
+                                    <pre>${escapeHtml(result.analysis)}</pre>
+                                </div>
+                                ` : ''}
+                            </div>
+                            ` : ''}
+                            ${result.details ? `
+                            <div class="details-box">
+                                <h4>📋 Agent Output</h4>
+                                <pre>${escapeHtml(result.details)}</pre>
                             </div>
                             ` : ''}
                         </div>
-                        ` : ''}
                     </div>
                 `;
             }).join('');
@@ -716,6 +842,21 @@
         
         function clearForm() {
             document.getElementById('testForm').reset();
+        }
+        
+        function updateSessionLink(sessionUrl) {
+            const container = document.getElementById('sessionLinkContainer');
+            const link = document.getElementById('sessionLink');
+            const message = document.getElementById('noSessionMessage');
+            
+            if (sessionUrl) {
+                link.href = sessionUrl;
+                container.style.display = 'block';
+                message.style.display = 'none';
+            } else {
+                container.style.display = 'none';
+                message.style.display = 'block';
+            }
         }
         
         document.getElementById('testForm').addEventListener('submit', async (e) => {
@@ -751,6 +892,11 @@
                     allResults.push(result);
                     updateStats();
                     renderResults();
+                    
+                    // Update session link in right panel
+                    if (result.session_url) {
+                        updateSessionLink(result.session_url);
+                    }
                     
                     showToast(result.success ? 'Test passed! ✓' : 'Test completed (with errors)', result.success ? 'success' : 'error');
                     

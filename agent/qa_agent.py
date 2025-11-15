@@ -210,46 +210,68 @@ class QAAgent:
             "url": url,
             "scenario": test_scenario,
             "sandbox_id": None,
+            "daytona_logs": [],
         }
+
+        def _log(message: str) -> None:
+            formatted = f"[Daytona] {message}"
+            print(formatted)
+            result["daytona_logs"].append(message)
 
         if not self._daytona_client:
             config = DaytonaConfig(api_key=self.daytona_api_key)
             if self.daytona_target:
                 config.target = self.daytona_target
             self._daytona_client = Daytona(config)
+            _log("Initialized Daytona client")
 
         sandbox = None
         try:
+            _log("Initializing sandbox-backed Browser-Use task...")
             sandbox = self._daytona_client.create()
             result["sandbox_id"] = sandbox.id
+            target_display = self.daytona_target or "default"
+            _log(f"Sandbox created (target={target_display}, id={sandbox.id})")
 
             # Upload helper script to sandbox
+            _log("Uploading runner script to sandbox...")
             helper = self._build_daytona_runner_script(test_scenario, url)
             sandbox.fs.upload_file(helper.encode("utf-8"), "run_browser_use.py")
+            _log("Runner script uploaded as run_browser_use.py")
 
             # Execute script inside sandbox
+            _log("Executing Browser-Use workflow inside sandbox...")
             exec_resp = sandbox.process.code_run("python run_browser_use.py")
             if exec_resp.exit_code != 0:
+                _log(
+                    f"Sandbox execution failed (exit={exec_resp.exit_code}). Output: {exec_resp.result}"
+                )
                 result["error"] = f"Sandbox execution failed: {exec_resp.exit_code} {exec_resp.result}"
                 return result
+
+            _log(f"Sandbox execution completed (exit={exec_resp.exit_code}). Parsing output...")
 
             # Parse JSON response from helper
             try:
                 returned = json.loads(exec_resp.result)
             except (TypeError, json.JSONDecodeError):
+                _log("Failed to decode sandbox response as JSON")
                 result["error"] = f"Unexpected sandbox response: {exec_resp.result}"
                 return result
 
             if not isinstance(returned, dict):
+                _log("Sandbox response was not a dictionary payload")
                 result["error"] = "Daytona sandbox returned invalid data"
                 return result
 
             if "sessionId" in returned and returned["sessionId"] and not result.get("session_url"):
                 result["session_url"] = f"https://cloud.browser-use.com/sessions/{returned['sessionId']}"
 
+            _log("Browser-Use task payload received from sandbox")
             self._interpret_task_outcome(result, returned, test_scenario, url)
 
         except Exception as exc:
+            _log(f"Exception during sandbox run: {exc}")
             result["error"] = str(exc)
             log_error_to_sentry(
                 error=exc,
@@ -264,8 +286,10 @@ class QAAgent:
             if sandbox is not None:
                 try:
                     sandbox.delete()
+                    _log(f"Sandbox {sandbox.id} deleted successfully")
                     result["sandbox_cleaned"] = True
                 except Exception:
+                    _log(f"Sandbox {sandbox.id} cleanup failed")
                     result["sandbox_cleaned"] = False
 
         return result

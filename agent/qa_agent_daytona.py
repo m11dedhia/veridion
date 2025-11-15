@@ -20,16 +20,19 @@ from llm_analysis.analyze_failure import analyze_failure
 class QAAgentDaytona:
     """AI-powered QA agent that runs tests in ephemeral Daytona sandboxes."""
     
-    def __init__(self, llm_provider: str = "openai", api_key: Optional[str] = None):
+    def __init__(self, llm_provider: str = "openai", api_key: Optional[str] = None, browser_use_api_key: Optional[str] = None):
         """
         Initialize the QA Agent with Daytona sandbox support.
         
         Args:
             llm_provider: Either "openai" or "anthropic"
             api_key: API key for the LLM provider
+            browser_use_api_key: API key for Browser Use Cloud service (optional, will try env var if not provided)
         """
         self.llm_provider = llm_provider
         self.api_key = api_key
+        # Get BROWSER_USE_API_KEY from parameter or environment
+        self.browser_use_api_key = browser_use_api_key or os.getenv('BROWSER_USE_API_KEY')
         
         # Initialize Daytona sandbox manager (uses SDK if available)
         try:
@@ -119,6 +122,7 @@ class QAAgentDaytona:
             escaped_scenario = test_scenario.replace('"', '\\"').replace('$', '\\$').replace('`', '\\`')
             escaped_url = url.replace('"', '\\"').replace('$', '\\$').replace('`', '\\`')
             escaped_api_key = self.api_key.replace('"', '\\"').replace('$', '\\$').replace('`', '\\`')
+            escaped_browser_use_key = (self.browser_use_api_key or '').replace('"', '\\"').replace('$', '\\$').replace('`', '\\`')
             
             test_script = f'''import asyncio
 import os
@@ -129,18 +133,23 @@ import traceback
 # Set environment variables
 os.environ['OPENAI_API_KEY'] = '{escaped_api_key}' if '{self.llm_provider}' == 'openai' else ''
 os.environ['ANTHROPIC_API_KEY'] = '{escaped_api_key}' if '{self.llm_provider}' == 'anthropic' else ''
+os.environ['BROWSER_USE_API_KEY'] = '{escaped_browser_use_key}' if '{escaped_browser_use_key}' else ''
 
 try:
-    from browser_use import Agent, Browser, BrowserConfig
+    # Import browser_use - use correct API per https://docs.cloud.browser-use.com/get-started/llm-quickstart
+    from browser_use import Agent
     
     async def run_test():
-        browser = Browser(config=BrowserConfig(headless=True, verbose=True))
+        # Create agent directly - no need for Browser or BrowserConfig
+        # The Agent handles browser initialization internally
         agent = Agent(
             task="{escaped_scenario}",
-            browser=browser,
             llm_provider="{self.llm_provider}",
-            api_key="{escaped_api_key}"
+            api_key="{escaped_api_key}",
+            headless=True
         )
+        
+        # Run the test - agent.run() handles browser automation
         await agent.run("{escaped_url}")
         return {{"success": True, "error": None}}
         

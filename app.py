@@ -44,7 +44,7 @@ def run_test():
     if not url or not scenario:
         return jsonify({'error': 'URL and scenario are required'}), 400
     
-    # Get API key
+    # Get API keys
     if llm_provider == 'openai':
         api_key = os.getenv('OPENAI_API_KEY')
     else:
@@ -53,11 +53,21 @@ def run_test():
     if not api_key:
         return jsonify({'error': f'{llm_provider.upper()}_API_KEY not set'}), 500
     
+    # Get Browser Use API key (optional but recommended)
+    browser_use_api_key = os.getenv('BROWSER_USE_API_KEY')
+    if not browser_use_api_key:
+        print("⚠️  Warning: BROWSER_USE_API_KEY not set. Browser Use may require it.")
+        print("   Get your key at: https://cloud.browser-use.com/new-api-key")
+    
     # Run test in Daytona sandbox (REQUIRED - no fallback)
     try:
         if use_daytona:
             # Use Daytona sandbox for isolation - REQUIRED
-            agent = QAAgentDaytona(llm_provider=llm_provider, api_key=api_key)
+            agent = QAAgentDaytona(
+                llm_provider=llm_provider, 
+                api_key=api_key,
+                browser_use_api_key=browser_use_api_key
+            )
             result = agent.run_test_in_sandbox(scenario, url, repo_url=repo_url)
         else:
             # Local execution only if explicitly disabled

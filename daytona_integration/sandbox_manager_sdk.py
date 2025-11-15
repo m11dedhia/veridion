@@ -5,6 +5,10 @@ Requires Python 3.10+ and DAYTONA_API_KEY environment variable.
 import os
 import sys
 from typing import Dict, Optional, Any
+from dotenv import load_dotenv
+
+# Load environment variables from .env file
+load_dotenv()
 
 # Check Python version - Daytona SDK requires Python 3.10+
 if sys.version_info < (3, 10):

@@ -3,6 +3,11 @@ LLM-based failure analysis using Claude or GPT-4.
 """
 import os
 from typing import Optional, Dict, Any
+from dotenv import load_dotenv
+
+# Load environment variables from .env file
+load_dotenv()
+
 from openai import OpenAI
 from anthropic import Anthropic
 

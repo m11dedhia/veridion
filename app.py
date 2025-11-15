@@ -2,7 +2,8 @@
 import os
 from flask import Flask, render_template, request, jsonify, redirect, url_for
 from dotenv import load_dotenv
-from agent.qa_agent import QAAgent, DEFAULT_TEST_SCENARIOS
+from agent.qa_agent_daytona import QAAgentDaytona
+from agent.qa_agent import DEFAULT_TEST_SCENARIOS
 from sentry.init_sentry import init_sentry
 
 # Load environment variables
@@ -28,26 +29,20 @@ def index():
 
 @app.route('/api/run-test', methods=['POST'])
 def run_test():
-    """API endpoint to run a Browser-Use Cloud test."""
+    """API endpoint to run a test in a Daytona sandbox."""
     data = request.json or {}
-
+    
     url = data.get('url')
     scenario = data.get('scenario')
-    llm_provider = data.get('llm_provider', os.getenv('BROWSER_USE_LLM', 'browser-use-llm'))
-
-    use_daytona_raw = data.get('use_daytona')
-    if use_daytona_raw is None:
-        env_val = os.getenv('USE_DAYTONA', 'false').strip().lower()
-        use_daytona = env_val in {'1', 'true', 'yes', 'on'}
-    elif isinstance(use_daytona_raw, bool):
-        use_daytona = use_daytona_raw
-    else:
-        use_daytona = str(use_daytona_raw).strip().lower() in {'1', 'true', 'yes', 'on'}
-
+    llm_provider = data.get('llm_provider', os.getenv('LLM_PROVIDER', 'openai'))
+    use_daytona = data.get('use_daytona', True)  # Default to using Daytona
+    repo_url = data.get('repo_url')  # Optional custom repo URL
+    
     if not url or not scenario:
         return jsonify({'error': 'URL and scenario are required'}), 400
-
-    # Browser-Use Cloud API key (required for task execution)
+    
+    # Universal API key fallback mechanism
+    # Checks in order: BROWSER_USE_API_KEY (preferred) -> OPENAI_API_KEY -> ANTHROPIC_API_KEY
     api_key = (
         data.get('browser_use_api_key')
         or os.getenv('BROWSER_USE_API_KEY')
@@ -56,7 +51,7 @@ def run_test():
         or data.get('anthropic_api_key')
         or os.getenv('ANTHROPIC_API_KEY')
     )
-
+    
     if not api_key:
         return jsonify({
             'error': (
@@ -64,26 +59,69 @@ def run_test():
                 'OPENAI_API_KEY / ANTHROPIC_API_KEY in your environment.'
             )
         }), 500
-
-    # Initialize agent
-    agent = QAAgent(
-        llm_provider=llm_provider,
-        api_key=api_key,
-        use_daytona=use_daytona,
-        daytona_api_key=data.get('daytona_api_key') or os.getenv('DAYTONA_API_KEY'),
-        daytona_target=data.get('daytona_target') or os.getenv('DAYTONA_TARGET'),
+    
+    # Get Browser Use API key (optional but recommended)
+    # Use the same fallback mechanism
+    browser_use_api_key = (
+        data.get('browser_use_api_key')
+        or os.getenv('BROWSER_USE_API_KEY')
+        or api_key  # Fallback to the universal API key
     )
-
-    # Run test (Daytona optional)
+    
+    # Run test in Daytona sandbox (REQUIRED - no fallback)
     try:
-        result = agent.run_test_sync(scenario, url)
+        if use_daytona:
+            # Use Daytona sandbox for isolation - REQUIRED
+            agent = QAAgentDaytona(
+                llm_provider=llm_provider, 
+                api_key=api_key,
+                browser_use_api_key=browser_use_api_key
+            )
+            result = agent.run_test_in_sandbox(scenario, url, repo_url=repo_url)
+        else:
+            # Local execution only if explicitly disabled
+            return jsonify({
+                'error': 'Daytona is required for QA tasks. Set use_daytona=true or install Daytona CLI/server.',
+                'success': False
+            }), 400
+        
         result['id'] = len(test_results)
         result['use_daytona'] = use_daytona
-        test_results.append(result)
-
-        return jsonify(result)
+        
+        # Ensure result is JSON serializable (remove any Sandbox objects or other non-serializable items)
+        # The agent already handles this, but double-check here for safety
+        import json
+        try:
+            # Test if result is JSON serializable
+            json.dumps(result)
+            cleaned_result = result
+        except (TypeError, ValueError):
+            # If not, recursively clean it
+            def clean_for_json(obj):
+                """Recursively remove non-serializable objects."""
+                if isinstance(obj, dict):
+                    cleaned = {}
+                    for k, v in obj.items():
+                        try:
+                            json.dumps(v)
+                            cleaned[k] = clean_for_json(v)
+                        except (TypeError, ValueError):
+                            # Skip non-serializable values
+                            cleaned[k] = str(v) if v is not None else None
+                    return cleaned
+                elif isinstance(obj, list):
+                    return [clean_for_json(item) for item in obj]
+                elif isinstance(obj, (str, int, float, bool, type(None))):
+                    return obj
+                else:
+                    return str(obj)
+            cleaned_result = clean_for_json(result)
+        
+        test_results.append(cleaned_result)
+        
+        return jsonify(cleaned_result)
     except Exception as e:
-        return jsonify({'error': str(e)}), 500
+        return jsonify({'error': str(e), 'traceback': str(e.__traceback__)}), 500
 
 
 @app.route('/api/results')
@@ -141,11 +179,41 @@ if __name__ == '__main__':
     print("")
 
     # Check LLM configuration
+    if os.getenv('OPENAI_API_KEY'):
+        print("✓ OpenAI API key configured")
+    elif os.getenv('ANTHROPIC_API_KEY'):
+        print("✓ Anthropic API key configured")
+    else:
+        print("⚠️  Warning: No LLM API keys found!")
+    
+    # Check Daytona availability
+    try:
+        from daytona_integration.sandbox_manager_sdk import DaytonaSandboxManager
+        manager = DaytonaSandboxManager()
+        print("✓ Daytona SDK initialized")
+    except Exception as e:
+        error_msg = str(e)
+        if "DAYTONA_API_KEY" in error_msg:
+            print("⚠️  Warning: DAYTONA_API_KEY not set")
+            print("   Get your API key from https://www.daytona.io/docs")
+            print("   Set it: export DAYTONA_API_KEY=your_key")
+        else:
+            print(f"⚠️  Warning: Daytona integration may not be available: {e}")
+            print("   See DAYTONA_API_KEY_SETUP.md for setup instructions")
+    
+    # Check Sentry configuration
+    if os.getenv('SENTRY_DSN'):
+        print("✓ Sentry DSN configured - errors will be logged to Sentry")
+    else:
+        print("⚠️  Warning: SENTRY_DSN not set - Sentry logging disabled")
+    
+    # Check Browser Use API key
     if os.getenv('BROWSER_USE_API_KEY'):
         print("✓ Browser-Use API key configured")
     else:
         print("⚠️  Warning: BROWSER_USE_API_KEY not set")
-
+        print("   Get your key at: https://cloud.browser-use.com/new-api-key")
+    
     print(f"🌐 Starting Flask server on http://0.0.0.0:{port}")
     print("=" * 60)
 

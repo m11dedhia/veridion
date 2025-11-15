@@ -36,9 +36,25 @@ def main():
     parser.add_argument(
         "--llm-provider",
         type=str,
-        choices=["openai", "anthropic"],
-        default=os.getenv("LLM_PROVIDER", "openai"),
-        help="LLM provider to use (default: openai)"
+        choices=[
+            "browser-use-llm",
+            "gpt-4.1",
+            "gpt-4.1-mini",
+            "gpt-4o",
+            "gpt-4o-mini",
+            "o4-mini",
+            "o3",
+            "claude-3-7-sonnet-20250219",
+            "claude-sonnet-4-20250514",
+            "claude-sonnet-4-5-20250929",
+            "gemini-2.5-pro",
+            "gemini-2.5-flash",
+            "gemini-flash-latest",
+            "gemini-flash-lite-latest",
+            "llama-4-maverick-17b-128e-instruct",
+        ],
+        default=os.getenv("BROWSER_USE_LLM", "browser-use-llm"),
+        help="Browser-Use model to run the agent with"
     )
     
     parser.add_argument(
@@ -71,16 +87,11 @@ def main():
     else:
         init_sentry()
     
-    # Get API key
-    api_key = args.api_key
+    # Get Browser-Use API key
+    api_key = args.api_key or os.getenv("BROWSER_USE_API_KEY")
+
     if not api_key:
-        if args.llm_provider == "openai":
-            api_key = os.getenv("OPENAI_API_KEY")
-        else:
-            api_key = os.getenv("ANTHROPIC_API_KEY")
-    
-    if not api_key:
-        print(f"Error: {args.llm_provider.upper()}_API_KEY not set")
+        print("Error: BROWSER_USE_API_KEY not set")
         sys.exit(1)
     
     # Initialize agent

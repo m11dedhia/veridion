@@ -13,6 +13,12 @@ AI QA Engineer is a browser- and CLI-based QA automation tool that uses AI agent
 - **Dual Interface**: CLI for automation and Flask web dashboard for demos
 - **Optional Observability**: Galileo integration for LLM trace debugging
 
+### Browser-Use Integration (Agent Mode)
+
+In addition to scripted Playwright tests, the AI QA Engineer supports an “agent mode” powered by Browser-Use. When this mode is enabled (for example, via `--agent-mode --url https://example.com`), the tool spins up a real browser and lets an AI agent drive it end-to-end. You provide a high-level task such as “open the app, log in with test credentials, and verify the dashboard loads,” and Browser-Use translates that into concrete browser actions: navigating, clicking, filling forms, and checking for expected UI elements.
+
+At the end of the run, the agent returns a structured result with a PASS/FAIL status and a concise natural-language summary of what it did and what went wrong if it failed. The CLI surfaces this as a smoke-test outcome, and any failures flow through the same pipeline as the regular tests: they’re logged to Sentry as errors, analyzed by Claude for deeper explanations, and the prompt/response pair is recorded in Galileo for observability. This makes Browser-Use a drop-in, AI-driven alternative to hand-written test scripts while still fitting seamlessly into the overall QA and monitoring flow.
+
 ## 🏗️ Architecture
 
 - **Core QA Engine**: Browser Use Python SDK (`Agent`, `Browser`, `ChatBrowserUse`)

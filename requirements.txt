@@ -4,3 +4,8 @@ python-dotenv>=1.0.0
 openai>=1.0.0
 anthropic>=0.18.0
 requests>=2.31.0
+daytona>=0.22.0
+
+# Daytona SDK - Official Python SDK for Daytona cloud platform
+# Get API key from https://www.daytona.io/docs
+# Set DAYTONA_API_KEY environment variable

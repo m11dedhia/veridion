@@ -551,6 +551,9 @@
                                 <div class="scenario-text">{{ result.scenario }}</div>
                                 <div class="result-meta">
                                     <span>ID: #{{ result.id if result.id else loop.index0 }}</span>
+                                    {% if result.sandbox_id %}<span>🏗️ Sandbox: {{ result.sandbox_id }}</span>{% endif %}
+                                    {% if result.use_daytona is defined %}<span>{{ '✓ Daytona' if result.use_daytona else 'Local' }}</span>{% endif %}
+                                    {% if result.sandbox_cleaned is defined %}<span>{{ '🧹 Cleaned' if result.sandbox_cleaned else '⚠️ Cleanup failed' }}</span>{% endif %}
                                 </div>
                             </div>
                             <span class="status-badge {{ 'success' if result.success else 'failure' }}">
@@ -659,6 +662,9 @@
                                 <div class="scenario-text">${escapeHtml(result.scenario)}</div>
                                 <div class="result-meta">
                                     <span>ID: #${result.id !== undefined ? result.id : (allResults.length - index - 1)}</span>
+                                    ${result.sandbox_id ? `<span>🏗️ Sandbox: ${result.sandbox_id}</span>` : ''}
+                                    ${result.use_daytona !== undefined ? `<span>${result.use_daytona ? '✓ Daytona' : 'Local'}</span>` : ''}
+                                    ${result.sandbox_cleaned !== undefined ? `<span>${result.sandbox_cleaned ? '🧹 Cleaned' : '⚠️ Cleanup failed'}</span>` : ''}
                                 </div>
                             </div>
                             <span class="status-badge ${statusClass}">${statusBadge}</span>

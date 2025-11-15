@@ -24,14 +24,26 @@ RUN apt-get update && apt-get install -y \
     libxkbcommon0 \
     libxrandr2 \
     xdg-utils \
+    curl \
     && rm -rf /var/lib/apt/lists/*
 
 WORKDIR /workspace
 
+# Copy requirements and install dependencies
 COPY requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
 
+# Copy application code
 COPY . .
 
-CMD ["python", "app.py"]
+# Make startup script executable
+RUN chmod +x start.sh 2>/dev/null || true
+
+# Expose Flask port
+EXPOSE 5000
+
+# Default command - can be overridden in docker-compose
+# For Daytona, we use tail -f /dev/null to keep container running
+# and start the app via postCreateCommand or manually
+CMD ["tail", "-f", "/dev/null"]
 

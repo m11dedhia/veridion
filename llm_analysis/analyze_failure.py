@@ -49,10 +49,19 @@ Please provide:
 Format your response in a clear, structured way."""
 
     try:
+        # Log that LLM call is being made from sandbox
+        import socket
+        hostname = socket.gethostname()
+        print(f"[Sandbox: {hostname}] Making LLM API call to {provider}...")
+        
         if provider.lower() == "anthropic":
-            return _analyze_with_anthropic(prompt)
+            result = _analyze_with_anthropic(prompt)
+            print(f"[Sandbox: {hostname}] LLM analysis completed (Anthropic)")
+            return result
         else:
-            return _analyze_with_openai(prompt)
+            result = _analyze_with_openai(prompt)
+            print(f"[Sandbox: {hostname}] LLM analysis completed (OpenAI)")
+            return result
     except Exception as e:
         return f"Failed to analyze with LLM: {str(e)}\n\nOriginal error: {error}"
 

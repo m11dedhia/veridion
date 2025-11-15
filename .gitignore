@@ -36,3 +36,4 @@ test_results/
 # Docker
 .dockerignore
 
+venv*/

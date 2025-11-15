@@ -12,5 +12,12 @@ services:
       - "5000:5000"
     environment:
       - PYTHONUNBUFFERED=1
+      - FLASK_ENV=development
+      - PORT=5000
+    # Keep container running and allow manual start
     command: tail -f /dev/null
+    # Alternative: Auto-start Flask app
+    # command: python app.py
+    networks:
+      - default
 

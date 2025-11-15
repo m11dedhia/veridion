@@ -32,6 +32,21 @@ AI QA Engineer is a browser- and CLI-based QA automation tool that uses AI agent
 
 ## 🚀 Quick Start
 
+### Option 1: Run in Daytona Sandbox (Recommended)
+
+**All workload runs in Daytona sandboxes - LLM calls, browser automation, and processing all happen inside the sandbox.**
+
+1. **Open in Daytona**: Create a new workspace from this repository
+2. **Set Environment Variables** in Daytona:
+   - `OPENAI_API_KEY` or `ANTHROPIC_API_KEY`
+   - `SENTRY_DSN` (optional)
+3. **Auto-start**: The sandbox automatically installs dependencies and starts the Flask app
+4. **Access Dashboard**: Use Daytona's port forwarding (usually port 5000)
+
+See [README_DAYTONA.md](README_DAYTONA.md) for detailed Daytona setup instructions.
+
+### Option 2: Local Development
+
 ### 1. Clone and Setup
 
 ```bash
@@ -72,7 +87,7 @@ pip install -r requirements.txt
 
 ### 4. Run in Daytona
 
-The project is configured for Daytona. Simply open it in a Daytona workspace and it will automatically set up the environment.
+**Recommended**: The project is fully configured for Daytona. Open it in a Daytona workspace and all workload (including LLM calls) will run in the sandbox. See [README_DAYTONA.md](README_DAYTONA.md) for details.
 
 ### 5. Run Tests
 
@@ -178,12 +193,15 @@ Galileo can be integrated for LLM observability. Add the Galileo SDK to your cod
 
 For the Daytona HackSprint demo:
 
-1. **Start Daytona workspace** → Environment ready
-2. **Run AI browser agent** → Test executes autonomously
-3. **Failure occurs** → Error captured
-4. **Sentry logs error** → Error visible in Sentry dashboard
-5. **LLM analyzes failure** → Human-readable summary generated
-6. **View in dashboard** → Results displayed in web UI
+1. **Start Daytona workspace** → Environment ready (all code runs in sandbox)
+2. **Run AI browser agent** → Test executes autonomously from sandbox
+3. **LLM calls made** → All API calls originate from Daytona sandbox IP
+4. **Failure occurs** → Error captured in sandbox
+5. **Sentry logs error** → Error visible in Sentry dashboard
+6. **LLM analyzes failure** → Human-readable summary generated (from sandbox)
+7. **View in dashboard** → Results displayed in web UI
+
+**Verify sandbox execution**: Visit `/api/sandbox-info` endpoint to see sandbox details.
 
 ## 🐛 Troubleshooting
 

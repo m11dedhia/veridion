@@ -4,7 +4,26 @@ AI QA Agent using Browser Use for autonomous browser testing.
 import asyncio
 import traceback
 from typing import Dict, Optional, Any
-from browser_use import Agent, Browser, BrowserConfig
+
+# Make browser-use optional
+try:
+    from browser_use import Agent, Browser, BrowserConfig
+    BROWSER_USE_AVAILABLE = True
+except ImportError:
+    BROWSER_USE_AVAILABLE = False
+    # Create dummy classes for when browser-use is not available
+    class Agent:
+        def __init__(self, *args, **kwargs):
+            pass
+        async def run(self, *args, **kwargs):
+            pass
+    class Browser:
+        def __init__(self, *args, **kwargs):
+            pass
+    class BrowserConfig:
+        def __init__(self, *args, **kwargs):
+            pass
+
 from sentry.init_sentry import log_error_to_sentry
 from llm_analysis.analyze_failure import analyze_failure
 
@@ -46,6 +65,11 @@ class QAAgent:
             "traceback": None,
             "analysis": None
         }
+        
+        if not BROWSER_USE_AVAILABLE:
+            result["error"] = "browser-use package is not installed. Please install it with: pip install browser-use (requires Python 3.11+)"
+            result["analysis"] = "Browser Use is required for running automated browser tests. The package requires Python 3.11 or higher."
+            return result
         
         try:
             # Initialize browser and agent

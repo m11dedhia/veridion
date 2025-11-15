@@ -34,3 +34,32 @@ All tests run inside ephemeral **Daytona sandboxes**, log issues to **Sentry**, 
 ---
 
 ## 📂 File Structure
+ai-qa-engineer/
+├── .devcontainer/devcontainer.json
+├── docker-compose.yml
+├── agent/qa_agent.py
+├── sentry/init_sentry.py
+├── llm_analysis/analyze_failure.py
+├── cli.py
+├── app.py
+├── requirements.txt
+└── README.md
+
+---
+
+## ⚙️ Implementation Details
+
+### `.devcontainer/devcontainer.json`
+```json
+{
+  "name": "AI QA Engineer",
+  "dockerComposeFile": "../docker-compose.yml",
+  "service": "tester",
+  "workspaceFolder": "/workspace/ai-qa-engineer",
+  "customizations": {
+    "vscode": {
+      "extensions": ["ms-python.python"]
+    }
+  },
+  "postCreateCommand": "pip install -r requirements.txt"
+}
